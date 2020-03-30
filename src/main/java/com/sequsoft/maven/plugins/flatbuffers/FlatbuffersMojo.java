@@ -3,11 +3,9 @@ package com.sequsoft.maven.plugins.flatbuffers;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
-import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.apache.maven.project.MavenProject;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
@@ -17,6 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.concurrent.Executors;
+import java.util.function.Consumer;
 
 @Mojo(name = "compile-flatbuffers", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
 public class FlatbuffersMojo extends AbstractMojo {
@@ -24,13 +23,10 @@ public class FlatbuffersMojo extends AbstractMojo {
     private static final String USER_HOME = "user.home";
     private static final String FB_DIR = ".flatbuffers";
     private static final String FLATBUFFERS_REPO = "https://github.com/google/flatbuffers.git";
-    private static final String DEFAULT_TAG = "v1.12.0";
+    private static final String DEFAULT_TAG = "1.12.0";
 
-    @Parameter(defaultValue = "${project}", required = true, readonly = true)
-    MavenProject project;
-
-    @Parameter(property = "branch")
-    String tag;
+    @Parameter(property = "version")
+    String version;
 
     @Parameter(property = "flatbuffersUrl")
     String flatbuffersUrl;
@@ -40,14 +36,29 @@ public class FlatbuffersMojo extends AbstractMojo {
 
         try {
             String home = getUserHomeDirectory();
-            String fbHome = ensureFlatbuffersDirectory(home);
-            Git repo = ensureFlatbuffersRepository(new File(fbHome));
-            checkoutTag(repo, tag());
-            runShellCommand("cmake .", new File(fbHome));
-            runShellCommand("make", new File(fbHome));
+            File fbHome = ensureFlatbuffersDirectory(home);
+            Git repo = ensureFlatbuffersRepository(fbHome);
+
+            String version = version();
+            getLog().info("Required version of flatc is " + version);
+
+            if (!flatcCompilerMatchesVersion(version, fbHome)) {
+                completelyClean(fbHome);
+                checkoutTag(repo, version);
+                runShellCommand("cmake .", fbHome, s -> getLog().info(s));
+                runShellCommand("make", fbHome, s -> getLog().info(s));
+            }
         } catch (FBRuntimeException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
+    }
+
+    private String flatbuffersUrl() {
+        return flatbuffersUrl == null ? FLATBUFFERS_REPO : flatbuffersUrl;
+    }
+
+    private String version() {
+        return version == null ? DEFAULT_TAG : version;
     }
 
     private String getUserHomeDirectory() {
@@ -60,7 +71,7 @@ public class FlatbuffersMojo extends AbstractMojo {
         return home;
     }
 
-    private String ensureFlatbuffersDirectory(String home) {
+    private File ensureFlatbuffersDirectory(String home) {
         try {
             Path path = Paths.get(home, FB_DIR);
             if (!Files.exists(path)) {
@@ -70,7 +81,7 @@ public class FlatbuffersMojo extends AbstractMojo {
                 getLog().info("Directory " + FB_DIR + " already exists.");
             }
 
-            return path.toString();
+            return new File(path.toString());
         } catch (IOException e) {
             throw new FBRuntimeException(e.getMessage());
         }
@@ -81,19 +92,11 @@ public class FlatbuffersMojo extends AbstractMojo {
             getLog().info("Opening flatbuffers git repository in " + dir.toString() + ".");
             return Git.open(dir);
         } catch(IOException e) {
-            return closeFlatbuffersRepository(dir);
+            return cloneFlatbuffersRepository(dir);
         }
     }
 
-    private String flatbuffersUrl() {
-        return flatbuffersUrl == null ? FLATBUFFERS_REPO : flatbuffersUrl;
-    }
-
-    private String tag() {
-        return tag == null ? DEFAULT_TAG : tag;
-    }
-
-    private Git closeFlatbuffersRepository(File dir) {
+    private Git cloneFlatbuffersRepository(File dir) {
         try {
             String url = flatbuffersUrl();
             getLog().info("Cloning flatbuffers repository from " + url + ".");
@@ -108,45 +111,64 @@ public class FlatbuffersMojo extends AbstractMojo {
 
     private void checkoutTag(Git repo, String tag) {
         try {
-            repo.checkout().setName(tag).call();
+            getLog().info("Checking out tag v" + tag + ".");
+            repo.checkout().setName("v" + tag).call();
         } catch (GitAPIException e) {
-            throw new FBRuntimeException("Could not checkout tag " + tag + ".", e);
+            throw new FBRuntimeException("Could not checkout tag v" + tag + ".", e);
+        }
+    }
+
+    private boolean flatcCompilerMatchesVersion(String version, File dir) {
+        try {
+            String[] captor = new String[1];
+            runShellCommand("./flatc --version", dir, s -> captor[0] = s);
+
+            if (captor[0] == null) {
+                getLog().info("No flatc version found - will need to compile...");
+                return false;
+            } else if (captor[0].contains(version)) {
+                getLog().info("flatc version " + version + " is correct - no need to compile.");
+                return true;
+            } else {
+                getLog().info("flatc version is not " + version + " - will need to compile...");
+                return false;
+            }
+
+        } catch (FBRuntimeException e) {
+            getLog().info("No flatc version found - will need to compile...");
+            return false;
         }
     }
 
     boolean isWindows = System.getProperty("os.name")
             .toLowerCase().startsWith("windows");
 
-    private void runShellCommand(String command, File dir) {
-        int exitCode = 0;
+    private void runShellCommand(String command, File dir, Consumer<String> consumer) {
+        int exitCode;
         try {
             Process process = Runtime.getRuntime().exec(command,null, dir);
 
-            StreamConsumer streamConsumer = new StreamConsumer(process.getInputStream(), s -> getLog().info(s));
+            StreamConsumer streamConsumer = new StreamConsumer(process.getInputStream(), consumer);
 
             Executors.newSingleThreadExecutor().submit(streamConsumer);
 
             exitCode = process.waitFor();
         } catch(Exception e) {
-            throw new FBRuntimeException("Process " + command + " threw exception: " + e.getMessage(), e);
+            throw new FBRuntimeException("Process '" + command + "' threw exception: " + e.getMessage(), e);
         }
 
         if (exitCode != 0) {
-            getLog().info("Exit code: " + exitCode);
             throw new FBRuntimeException("Process " + command + " exited with non-zero status");
         }
+    }
 
-        /*if (isWindows) {
-            process = Runtime.getRuntime()
-                    .exec(String.format("cmd.exe /c dir %s", homeDirectory));
-        } else {
-            process = Runtime.getRuntime()
-                    .exec(String.format("sh -c ls %s", homeDirectory));
+    private void completelyClean(File dir) {
+        try {
+            // JGit can't do complete clean!! Need to use command line...
+            getLog().info("Completely clean the git repository prior to rebuild.");
+            runShellCommand("git clean -d -f -x", dir, s -> getLog().info(s));
+        } catch (Exception e) {
+            throw new FBRuntimeException("Could not clean repository.", e);
         }
-        StreamGobbler streamGobbler =
-                new StreamGobbler(process.getInputStream(), System.out::println);
-        Executors.newSingleThreadExecutor().submit(streamGobbler);
-        int exitCode = process.waitFor();
-        assert exitCode == 0;*/
     }
 }
