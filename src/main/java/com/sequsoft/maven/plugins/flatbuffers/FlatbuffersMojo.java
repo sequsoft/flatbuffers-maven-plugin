@@ -14,6 +14,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
@@ -23,13 +27,32 @@ public class FlatbuffersMojo extends AbstractMojo {
     private static final String USER_HOME = "user.home";
     private static final String FB_DIR = ".flatbuffers";
     private static final String FLATBUFFERS_REPO = "https://github.com/google/flatbuffers.git";
-    private static final String DEFAULT_TAG = "1.12.0";
+    private static final String DEFAULT_VERSION = "1.12.0";
+    private static final String DEFAULT_DESTINATION = "target/generated-sources";
+    private static final Set<String> ALLOWED_GENERATORS = new HashSet<String>() {{
+        add("mutable");
+        add("generated");
+        add("nullable");
+        add("all");
+    }};
 
-    @Parameter(property = "version")
+    @Parameter(property = "version", defaultValue = DEFAULT_VERSION)
     String version;
 
-    @Parameter(property = "flatbuffersUrl")
+    @Parameter(property = "flatbuffersUrl", defaultValue = FLATBUFFERS_REPO)
     String flatbuffersUrl;
+
+    @Parameter(property = "sources")
+    List<String> sources;
+
+    @Parameter(property = "destination", defaultValue = DEFAULT_DESTINATION)
+    String destination;
+
+    @Parameter(property = "includes")
+    List<String> includes;
+
+    @Parameter(property = "generators")
+    Set<String> generators;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
@@ -39,7 +62,9 @@ public class FlatbuffersMojo extends AbstractMojo {
             File fbHome = ensureFlatbuffersDirectory(home);
             Git repo = ensureFlatbuffersRepository(fbHome);
 
-            String version = version();
+            getLog().info("SOURCES = " + sources);
+            getLog().info("GENERATORS = " + generators);
+
             getLog().info("Required version of flatc is " + version);
 
             if (!flatcCompilerMatchesVersion(version, fbHome)) {
@@ -48,17 +73,11 @@ public class FlatbuffersMojo extends AbstractMojo {
                 runShellCommand("cmake .", fbHome, s -> getLog().info(s));
                 runShellCommand("make", fbHome, s -> getLog().info(s));
             }
+
+            performFlatcCompilation();
         } catch (FBRuntimeException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
-    }
-
-    private String flatbuffersUrl() {
-        return flatbuffersUrl == null ? FLATBUFFERS_REPO : flatbuffersUrl;
-    }
-
-    private String version() {
-        return version == null ? DEFAULT_TAG : version;
     }
 
     private String getUserHomeDirectory() {
@@ -98,14 +117,13 @@ public class FlatbuffersMojo extends AbstractMojo {
 
     private Git cloneFlatbuffersRepository(File dir) {
         try {
-            String url = flatbuffersUrl();
-            getLog().info("Cloning flatbuffers repository from " + url + ".");
+            getLog().info("Cloning flatbuffers repository from " + flatbuffersUrl + ".");
             return Git.cloneRepository()
-                    .setURI(flatbuffersUrl())
+                    .setURI(flatbuffersUrl)
                     .setDirectory(dir)
                     .call();
         } catch (GitAPIException e) {
-            throw new FBRuntimeException("Could not clone repository " + FLATBUFFERS_REPO + ".", e);
+            throw new FBRuntimeException("Could not clone repository " + flatbuffersUrl + ".", e);
         }
     }
 
@@ -170,5 +188,79 @@ public class FlatbuffersMojo extends AbstractMojo {
         } catch (Exception e) {
             throw new FBRuntimeException("Could not clean repository.", e);
         }
+    }
+
+    private void validateGenerators() {
+        Set<String> generators = new HashSet<>();
+
+        if (this.generators != null) {
+            for (String requestedGenerator : this.generators) {
+                if (ALLOWED_GENERATORS.contains(requestedGenerator)) {
+                    generators.add(requestedGenerator);
+                } else {
+                    throw new FBRuntimeException("Generator " + requestedGenerator + " is not valid.");
+                }
+            }
+        }
+    }
+
+    private void validateIncludes() {
+        if (includes == null) {
+            includes = new ArrayList<>();
+            return;
+        }
+
+        for (String include : includes) {
+            if (!(new File(include).exists())) {
+                throw new FBRuntimeException("include directory " + include + " does not exist.");
+            }
+        }
+    }
+
+    private void validateSources() {
+        if (sources == null || sources.size() == 0) {
+            throw new FBRuntimeException("At least once source must be provided to generate from.");
+        }
+
+        if (sources != null) {
+            for (String requestedSource : sources) {
+                if (!(new File(requestedSource).exists())) {
+                    throw new FBRuntimeException("source file " + requestedSource + " does not exist.");
+                }
+            }
+        }
+    }
+
+    private void performFlatcCompilation() {
+        validateGenerators();
+        validateIncludes();
+        validateSources();
+
+        StringBuilder flatc = new StringBuilder(getUserHomeDirectory());
+        flatc.append("/");
+        flatc.append(FB_DIR);
+        flatc.append("/flatc --java -o ");
+        flatc.append(destination);
+
+        if (generators.size() > 0) {
+            for(String generator : generators) {
+                flatc.append(" --gen-");
+                flatc.append(generator);
+            }
+        }
+
+        if (includes.size() > 0) {
+            for (String include : includes) {
+                flatc.append(" -I ");
+                flatc.append((include));
+            }
+        }
+
+        flatc.append(" ");
+        flatc.append(String.join(" ", sources));
+
+        getLog().info("generate java sources using: " + flatc.toString());
+        runShellCommand(flatc.toString(), new File("."), s -> getLog().info(s));
+        getLog().info("Class generation completed successfully!");
     }
 }
