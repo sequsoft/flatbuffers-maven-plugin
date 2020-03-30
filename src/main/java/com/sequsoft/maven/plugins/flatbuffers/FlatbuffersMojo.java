@@ -3,6 +3,7 @@ package com.sequsoft.maven.plugins.flatbuffers;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
+import org.apache.maven.plugins.annotations.Execute;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.Executors;
 
 @Mojo(name = "compile-flatbuffers", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
 public class FlatbuffersMojo extends AbstractMojo {
@@ -41,6 +43,8 @@ public class FlatbuffersMojo extends AbstractMojo {
             String fbHome = ensureFlatbuffersDirectory(home);
             Git repo = ensureFlatbuffersRepository(new File(fbHome));
             checkoutTag(repo, tag());
+            runShellCommand("cmake .", new File(fbHome));
+            runShellCommand("make", new File(fbHome));
         } catch (FBRuntimeException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
@@ -108,5 +112,41 @@ public class FlatbuffersMojo extends AbstractMojo {
         } catch (GitAPIException e) {
             throw new FBRuntimeException("Could not checkout tag " + tag + ".", e);
         }
+    }
+
+    boolean isWindows = System.getProperty("os.name")
+            .toLowerCase().startsWith("windows");
+
+    private void runShellCommand(String command, File dir) {
+        int exitCode = 0;
+        try {
+            Process process = Runtime.getRuntime().exec(command,null, dir);
+
+            StreamConsumer streamConsumer = new StreamConsumer(process.getInputStream(), s -> getLog().info(s));
+
+            Executors.newSingleThreadExecutor().submit(streamConsumer);
+
+            exitCode = process.waitFor();
+        } catch(Exception e) {
+            throw new FBRuntimeException("Process " + command + " threw exception: " + e.getMessage(), e);
+        }
+
+        if (exitCode != 0) {
+            getLog().info("Exit code: " + exitCode);
+            throw new FBRuntimeException("Process " + command + " exited with non-zero status");
+        }
+
+        /*if (isWindows) {
+            process = Runtime.getRuntime()
+                    .exec(String.format("cmd.exe /c dir %s", homeDirectory));
+        } else {
+            process = Runtime.getRuntime()
+                    .exec(String.format("sh -c ls %s", homeDirectory));
+        }
+        StreamGobbler streamGobbler =
+                new StreamGobbler(process.getInputStream(), System.out::println);
+        Executors.newSingleThreadExecutor().submit(streamGobbler);
+        int exitCode = process.waitFor();
+        assert exitCode == 0;*/
     }
 }
