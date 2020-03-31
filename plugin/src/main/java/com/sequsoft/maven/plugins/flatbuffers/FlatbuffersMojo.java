@@ -167,6 +167,12 @@ public class FlatbuffersMojo extends AbstractMojo {
             String cmd = flatcExecutablePath() + " --version";
             runShellCommand(cmd, dir, s -> captor[0] = s);
 
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            
             if (captor[0] == null) {
                 getLog().info("No flatc version found - will need to compile...");
                 return false;
@@ -188,18 +194,25 @@ public class FlatbuffersMojo extends AbstractMojo {
         int exitCode;
         getLog().info("Running shell command '" + command + "' in directory '" + dir.toString() + "'.");
         try {
-            Process process = Runtime.getRuntime().exec(command,null, dir);
+            Process process = new ProcessBuilder()
+                    .command(command.split(" "))
+                    .directory(dir)
+                    .redirectErrorStream(true)
+                    .start();
 
             StreamConsumer streamConsumer = new StreamConsumer(process.getInputStream(), consumer);
 
             Executors.newSingleThreadExecutor().submit(streamConsumer);
 
             exitCode = process.waitFor();
+            getLog().info("Process completed.");
         } catch(Exception e) {
+            getLog().info("Process threw exception: " + e.getMessage());
             throw new FBRuntimeException("Process '" + command + "' threw exception: " + e.getMessage(), e);
         }
 
         if (exitCode != 0) {
+            getLog().info("Process exit code was: " + exitCode);
             throw new FBRuntimeException("Process " + command + " exited with non-zero status");
         }
     }

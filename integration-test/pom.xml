@@ -39,7 +39,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <flatbuffersUrl>https://github.com/google/2latbuffers.git</flatbuffersUrl>
+                    <flatbuffersUrl>https://github.com/google/flatbuffers.git</flatbuffersUrl>
                     <version>1.12.0</version>
                     <sources>
                         <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
