@@ -1,0 +1,12 @@
+include "F_Sex.fbs";
+
+namespace com.sequsoft.bufmark.flatbuffers;
+
+table F_Person {
+  id:string;
+  name:string;
+  sex:F_Sex;
+  // date of birth in seconds since Unix Epoch
+  dateOfBirth:int64;
+  about:string;
+}

@@ -6,8 +6,11 @@
 
     <groupId>com.sequsoft.maven.plugins</groupId>
     <artifactId>flatbuffers-maven-plugin</artifactId>
-    <packaging>maven-plugin</packaging>
+    <packaging>pom</packaging>
     <version>0.0.1-SNAPSHOT</version>
+    <modules>
+        <module>integration-test</module>
+    </modules>
 
     <name>Flatbuffers maven plugin</name>
 
