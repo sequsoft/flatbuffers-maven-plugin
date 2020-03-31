@@ -36,21 +36,39 @@ public class FlatbuffersMojo extends AbstractMojo {
         add("all");
     }};
 
+    /**
+     * The version of flatbuffers to be used. Optional: default is 1.12.0.
+     */
     @Parameter(property = "version", defaultValue = DEFAULT_VERSION)
     String version;
 
+    /**
+     * The url to Google's flatbuffers repository. Optional: default is https://github.com/google/flatbuffers.git.
+     */
     @Parameter(property = "flatbuffersUrl", defaultValue = FLATBUFFERS_REPO)
     String flatbuffersUrl;
 
+    /**
+     * A list of source schemas to be compiled by flatc. Required - at least one value must be provided.
+     */
     @Parameter(property = "sources")
     List<String> sources;
 
+    /**
+     * The destination directory for compiled files. Optional, default is target/generated-sources.
+     */
     @Parameter(property = "destination", defaultValue = DEFAULT_DESTINATION)
     String destination;
 
+    /**
+     * A list of directories that will be search for schemas to include during compilation. Optional.
+     */
     @Parameter(property = "includes")
     List<String> includes;
 
+    /**
+     * A list of generator options, from the allowed list: mutable, generated, nullable and all. Optional.
+     */
     @Parameter(property = "generators")
     Set<String> generators;
 

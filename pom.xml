@@ -11,6 +11,11 @@
 
     <name>Flatbuffers maven plugin</name>
 
+    <organization>
+        <name>Sequsoft</name>
+        <url>https://www.sequsoft.com</url>
+    </organization>
+
     <url>https://sequsoft.github.io/flatbuffers-maven-plugin</url>
 
     <properties>
@@ -57,6 +62,27 @@
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.6.0</version>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-site-plugin</artifactId>
+                <version>3.9.0</version>
+            </plugin>
         </plugins>
     </build>
+
+    <reporting>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <reportSets>
+                    <reportSet>
+                        <reports>
+                            <report>report</report>
+                        </reports>
+                    </reportSet>
+                </reportSets>
+            </plugin>
+        </plugins>
+    </reporting>
 </project>
