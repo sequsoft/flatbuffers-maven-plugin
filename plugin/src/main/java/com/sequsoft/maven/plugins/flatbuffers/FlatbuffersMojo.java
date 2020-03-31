@@ -36,6 +36,9 @@ public class FlatbuffersMojo extends AbstractMojo {
         add("all");
     }};
 
+    private static boolean ON_WINDOWS = System.getProperty("os.name")
+            .toLowerCase().startsWith("windows");
+
     /**
      * The version of flatbuffers to be used. Optional: default is 1.12.0.
      */
@@ -154,10 +157,15 @@ public class FlatbuffersMojo extends AbstractMojo {
         }
     }
 
+    private String flatcExecutablePath() {
+        return Paths.get(getUserHomeDirectory(), FB_DIR, ON_WINDOWS ? "flatc.exe" : "flatc").toString();
+    }
+
     private boolean flatcCompilerMatchesVersion(String version, File dir) {
         try {
             String[] captor = new String[1];
-            runShellCommand("./flatc --version", dir, s -> captor[0] = s);
+            String cmd = flatcExecutablePath() + " --version";
+            runShellCommand(cmd, dir, s -> captor[0] = s);
 
             if (captor[0] == null) {
                 getLog().info("No flatc version found - will need to compile...");
@@ -175,9 +183,6 @@ public class FlatbuffersMojo extends AbstractMojo {
             return false;
         }
     }
-
-    boolean isWindows = System.getProperty("os.name")
-            .toLowerCase().startsWith("windows");
 
     private void runShellCommand(String command, File dir, Consumer<String> consumer) {
         int exitCode;
@@ -254,31 +259,29 @@ public class FlatbuffersMojo extends AbstractMojo {
         validateIncludes();
         validateSources();
 
-        StringBuilder flatc = new StringBuilder(getUserHomeDirectory());
-        flatc.append("/");
-        flatc.append(FB_DIR);
-        flatc.append("/flatc --java -o ");
-        flatc.append(destination);
+        StringBuilder cmd = new StringBuilder(flatcExecutablePath());
+        cmd.append(" --java -o ");
+        cmd.append(destination);
 
         if (generators.size() > 0) {
             for(String generator : generators) {
-                flatc.append(" --gen-");
-                flatc.append(generator);
+                cmd.append(" --gen-");
+                cmd.append(generator);
             }
         }
 
         if (includes.size() > 0) {
             for (String include : includes) {
-                flatc.append(" -I ");
-                flatc.append((include));
+                cmd.append(" -I ");
+                cmd.append((include));
             }
         }
 
-        flatc.append(" ");
-        flatc.append(String.join(" ", sources));
+        cmd.append(" ");
+        cmd.append(String.join(" ", sources));
 
-        getLog().info("generate java sources using: " + flatc.toString());
-        runShellCommand(flatc.toString(), new File("."), s -> getLog().info(s));
+        getLog().info("generate java sources using: " + cmd.toString());
+        runShellCommand(cmd.toString(), new File("."), s -> getLog().info(s));
         getLog().info("Class generation completed successfully!");
     }
 }
