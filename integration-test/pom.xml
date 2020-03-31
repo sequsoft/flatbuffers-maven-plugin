@@ -39,11 +39,10 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!--<flatbuffersUrl>https://github.com/google/2latbuffers.git</flatbuffersUrl>-->
-                    <!--<version>1.11.0</version>-->
+                    <flatbuffersUrl>https://github.com/google/2latbuffers.git</flatbuffersUrl>
+                    <version>1.12.0</version>
                     <sources>
                         <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
-                        <!--<source>src/main/resources/F_Country.fbs</source>-->
                     </sources>
                     <generators>
                         <generator>all</generator>
@@ -51,6 +50,7 @@
                     <includes>
                         <include>${basedir}/src/main/resources</include>
                     </includes>
+                    <destination>${basedir}/target/generated-sources</destination>
                 </configuration>
             </plugin>
         </plugins>
