@@ -186,6 +186,7 @@ public class FlatbuffersMojo extends AbstractMojo {
 
     private void runShellCommand(String command, File dir, Consumer<String> consumer) {
         int exitCode;
+        getLog().info("Running shell command '" + command + "' in directory '" + dir.toString() + "'.");
         try {
             Process process = Runtime.getRuntime().exec(command,null, dir);
 
