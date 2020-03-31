@@ -8,6 +8,9 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
+import org.zeroturnaround.exec.ProcessExecutor;
+import org.zeroturnaround.exec.ProcessResult;
+import org.zeroturnaround.exec.stream.LogOutputStream;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,7 +21,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 @Mojo(name = "compile-flatbuffers", defaultPhase = LifecyclePhase.GENERATE_SOURCES)
@@ -167,12 +170,6 @@ public class FlatbuffersMojo extends AbstractMojo {
             String cmd = flatcExecutablePath() + " --version";
             runShellCommand(cmd, dir, s -> captor[0] = s);
 
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            
             if (captor[0] == null) {
                 getLog().info("No flatc version found - will need to compile...");
                 return false;
@@ -191,29 +188,26 @@ public class FlatbuffersMojo extends AbstractMojo {
     }
 
     private void runShellCommand(String command, File dir, Consumer<String> consumer) {
-        int exitCode;
-        getLog().info("Running shell command '" + command + "' in directory '" + dir.toString() + "'.");
+        ProcessExecutor executor = new ProcessExecutor()
+                .command(command.split(" "))
+                .directory(dir)
+                .redirectOutput(new LogOutputStream() {
+                    @Override
+                    protected void processLine(String s) {
+                        consumer.accept(s);
+                    }
+                });
+
         try {
-            Process process = new ProcessBuilder()
-                    .command(command.split(" "))
-                    .directory(dir)
-                    .redirectErrorStream(true)
-                    .start();
-
-            StreamConsumer streamConsumer = new StreamConsumer(process.getInputStream(), consumer);
-
-            Executors.newSingleThreadExecutor().submit(streamConsumer);
-
-            exitCode = process.waitFor();
-            getLog().info("Process completed.");
-        } catch(Exception e) {
+            ProcessResult result = executor.execute();
+            int exitCode = result.getExitValue();
+            if (exitCode != 0) {
+                getLog().info("Process exit code was: " + exitCode);
+                throw new FBRuntimeException("Process " + command + " exited with non-zero status");
+            }
+        } catch (IOException | InterruptedException | TimeoutException e) {
             getLog().info("Process threw exception: " + e.getMessage());
             throw new FBRuntimeException("Process '" + command + "' threw exception: " + e.getMessage(), e);
-        }
-
-        if (exitCode != 0) {
-            getLog().info("Process exit code was: " + exitCode);
-            throw new FBRuntimeException("Process " + command + " exited with non-zero status");
         }
     }
 
@@ -228,8 +222,6 @@ public class FlatbuffersMojo extends AbstractMojo {
     }
 
     private void validateGenerators() {
-        Set<String> generators = new HashSet<>();
-
         if (this.generators != null) {
             for (String requestedGenerator : this.generators) {
                 if (ALLOWED_GENERATORS.contains(requestedGenerator)) {
