@@ -11,6 +11,7 @@
 
     <artifactId>flatbuffers-maven-plugin-integration-test</artifactId>
 
+    <name>Flatbuffers maven plugin integration test</name>
     <dependencies>
         <dependency>
             <groupId>javax.annotation</groupId>
@@ -36,14 +37,14 @@
                     <!--<flatbuffersUrl>https://github.com/google/2latbuffers.git</flatbuffersUrl>-->
                     <!--<version>1.11.0</version>-->
                     <sources>
-                        <source>src/main/resources/F_HouseGroup.fbs</source>
+                        <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
                         <!--<source>src/main/resources/F_Country.fbs</source>-->
                     </sources>
                     <generators>
                         <generator>all</generator>
                     </generators>
                     <includes>
-                        <include>src/main/resources</include>
+                        <include>${basedir}/src/main/resources</include>
                     </includes>
                 </configuration>
             </plugin>
