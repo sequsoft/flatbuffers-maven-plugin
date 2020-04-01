@@ -39,9 +39,6 @@ public class FlatbuffersMojo extends AbstractMojo {
         add("all");
     }};
 
-    private static boolean ON_WINDOWS = System.getProperty("os.name")
-            .toLowerCase().startsWith("windows");
-
     /**
      * The version of flatbuffers to be used. Optional: default is 1.12.0.
      */
@@ -161,7 +158,7 @@ public class FlatbuffersMojo extends AbstractMojo {
     }
 
     private String flatcExecutablePath() {
-        return Paths.get(getUserHomeDirectory(), FB_DIR, ON_WINDOWS ? "flatc.exe" : "flatc").toString();
+        return Paths.get(getUserHomeDirectory(), FB_DIR, "flatc").toString();
     }
 
     private boolean flatcCompilerMatchesVersion(String version, File dir) {
