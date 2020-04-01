@@ -14,6 +14,12 @@
     <name>Flatbuffers maven plugin integration test</name>
     <dependencies>
         <dependency>
+            <groupId>com.google.flatbuffers</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <version>1.12.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.sequsoft.maven.plugins</groupId>
             <artifactId>flatbuffers-maven-plugin</artifactId>
             <version>${project.version}</version>
@@ -40,7 +46,7 @@
                 </executions>
                 <configuration>
                     <flatbuffersUrl>https://github.com/google/flatbuffers.git</flatbuffersUrl>
-                    <version>1.11.0</version>
+                    <version>1.12.0</version>
                     <sources>
                         <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
                     </sources>

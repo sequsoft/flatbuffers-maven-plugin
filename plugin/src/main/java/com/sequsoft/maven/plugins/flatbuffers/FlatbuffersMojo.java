@@ -6,6 +6,7 @@ import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.zeroturnaround.exec.ProcessExecutor;
@@ -38,6 +39,12 @@ public class FlatbuffersMojo extends AbstractMojo {
         add("nullable");
         add("all");
     }};
+
+    /**
+     * The maven project, so that this plugin can add a generated sources directory.
+     */
+    @Parameter( readonly = true, defaultValue = "${project}" )
+    private MavenProject project;
 
     /**
      * The version of flatbuffers to be used. Optional: default is 1.12.0.
@@ -92,6 +99,7 @@ public class FlatbuffersMojo extends AbstractMojo {
             }
 
             performFlatcCompilation();
+            addGeneratedSources();
         } catch (FBRuntimeException e) {
             throw new MojoExecutionException(e.getMessage(), e);
         }
@@ -282,5 +290,10 @@ public class FlatbuffersMojo extends AbstractMojo {
         getLog().info("generate java sources using: " + cmd.toString());
         runShellCommand(cmd.toString(), new File("."), s -> getLog().info(s));
         getLog().info("Class generation completed successfully!");
+    }
+
+    private void addGeneratedSources() {
+        getLog().info("Generated source directory added to maven project: " + destination + ".");
+        project.addCompileSourceRoot(destination);
     }
 }
