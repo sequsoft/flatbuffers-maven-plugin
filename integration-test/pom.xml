@@ -40,7 +40,7 @@
                 </executions>
                 <configuration>
                     <flatbuffersUrl>https://github.com/google/flatbuffers.git</flatbuffersUrl>
-                    <version>1.12.0</version>
+                    <version>1.11.0</version>
                     <sources>
                         <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
                     </sources>

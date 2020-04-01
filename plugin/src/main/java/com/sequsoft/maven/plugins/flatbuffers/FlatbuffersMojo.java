@@ -79,16 +79,12 @@ public class FlatbuffersMojo extends AbstractMojo {
     public void execute() throws MojoExecutionException, MojoFailureException {
 
         try {
-            String home = getUserHomeDirectory();
-            File fbHome = ensureFlatbuffersDirectory(home);
-            Git repo = ensureFlatbuffersRepository(fbHome);
-
-            getLog().info("SOURCES = " + sources);
-            getLog().info("GENERATORS = " + generators);
+            File fbHome = ensureFlatbuffersDirectory();
 
             getLog().info("Required version of flatc is " + version);
 
             if (!flatcCompilerMatchesVersion(version, fbHome)) {
+                Git repo = ensureFlatbuffersRepository(fbHome);
                 completelyClean(fbHome);
                 checkoutTag(repo, version);
                 runShellCommand("cmake .", fbHome, s -> getLog().info(s));
@@ -111,9 +107,9 @@ public class FlatbuffersMojo extends AbstractMojo {
         return home;
     }
 
-    private File ensureFlatbuffersDirectory(String home) {
+    private File ensureFlatbuffersDirectory() {
         try {
-            Path path = Paths.get(home, FB_DIR);
+            Path path = Paths.get(getUserHomeDirectory(), FB_DIR);
             if (!Files.exists(path)) {
                 Files.createDirectory(path);
                 getLog().info("Created " + FB_DIR + " directory.");
