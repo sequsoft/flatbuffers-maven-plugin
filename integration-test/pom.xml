@@ -12,22 +12,17 @@
     <artifactId>flatbuffers-maven-plugin-integration-test</artifactId>
 
     <name>Flatbuffers maven plugin integration test</name>
+
+    <properties>
+        <flatbuffers.version>1.12.0</flatbuffers.version>
+    </properties>
+
+
     <dependencies>
         <dependency>
             <groupId>com.google.flatbuffers</groupId>
             <artifactId>flatbuffers-java</artifactId>
-            <version>1.12.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.sequsoft.maven.plugins</groupId>
-            <artifactId>flatbuffers-maven-plugin</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>javax.annotation</groupId>
-            <artifactId>javax.annotation-api</artifactId>
-            <version>1.3.2</version>
+            <version>${flatbuffers.version}</version>
         </dependency>
     </dependencies>
 
@@ -46,7 +41,7 @@
                 </executions>
                 <configuration>
                     <flatbuffersUrl>https://github.com/google/flatbuffers.git</flatbuffersUrl>
-                    <version>1.12.0</version>
+                    <version>${flatbuffers.version}</version>
                     <sources>
                         <source>${basedir}/src/main/resources/F_HouseGroup.fbs</source>
                     </sources>

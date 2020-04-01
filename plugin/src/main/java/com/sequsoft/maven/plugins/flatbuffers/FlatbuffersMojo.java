@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -136,7 +137,22 @@ public class FlatbuffersMojo extends AbstractMojo {
             getLog().info("Opening flatbuffers git repository in " + dir.toString() + ".");
             return Git.open(dir);
         } catch(IOException e) {
+            deleteFlatbuffersDirectoryIfExists(dir);
             return cloneFlatbuffersRepository(dir);
+        }
+    }
+
+    private void deleteFlatbuffersDirectoryIfExists(File dir) {
+        getLog().info("Deleting the flatbuffers directory to ensure clean state");
+        try {
+            if (dir.exists()) {
+                Files.walk(dir.toPath())
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            }
+        } catch (IOException e) {
+            throw new FBRuntimeException("Failed to delete flatbuffers directory");
         }
     }
 

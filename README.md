@@ -9,9 +9,21 @@ It can also be used in a simpler way with a `flatc` executable manually installe
 
 ## Usage
 
-Use the plugin as below in your maven build:
+Use the plugin as below in your maven build, making sure you also bring the required flatbuffers dependency:
 
 ```
+    <properties>
+        <flatbuffers.version>1.12.0</flatbuffers.version>
+    </properties>
+    
+    <dependencies>
+        <dependency>
+            <groupId>com.google.flatbuffers</groupId>
+            <artifactId>flatbuffers-java</artifactId>
+            <version>${flatbuffers.version}</version>
+        </dependency>
+    </dependencies>
+    
     <build>
         <plugins>
             <plugin>
@@ -88,5 +100,5 @@ Tested on:
 
 ## Known issues
 
-I haven't been able to make this work on Windows as I haven't been able to get the `cmake` process to work.
-If `flatc` is manually installed and you want to change the version, delete the `.flatbuffers` before running the plugin.
+- I haven't been able to make this work on Windows as I haven't been able to get the `cmake` process to work. Anyway, on 
+Windows maybe it is better just to obtain and install the `flatc.exe` file to the `.flatbuffers` directory.
