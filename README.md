@@ -1,6 +1,7 @@
 # Flatbuffers maven plugin
 
 [![Build Status](https://travis-ci.com/sequsoft/flatbuffers-maven-plugin.svg?branch=master)](https://travis-ci.com/sequsoft/flatbuffers-maven-plugin)</br>
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.sequsoft.maven.plugins/flatbuffers-maven-plugin/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.sequsoft.maven.plugins/flatbuffers-maven-plugin)</br>
 
 A maven plugin that can be used to generate Java source files from Flatbuffers schema files.
 It works by getting a specified tagged version of the flatbuffers source code from google's repositories,
