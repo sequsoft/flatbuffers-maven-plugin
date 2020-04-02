@@ -7,7 +7,7 @@
     <groupId>com.sequsoft.maven.plugins</groupId>
     <artifactId>flatbuffers-maven-plugin-parent</artifactId>
     <packaging>pom</packaging>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.1</version>
     <modules>
         <module>integration-test</module>
         <module>plugin</module>
